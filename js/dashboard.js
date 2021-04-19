@@ -17,6 +17,8 @@ $(document).ready(function(){
             return;
         }
   
+        addMachineSqft(myObj); // To update the SqFt Table on the right side
+  
          // Array of Colors
         var Color = [
                       'rgba(255, 99, 132, 0.2)',
@@ -37,13 +39,14 @@ $(document).ready(function(){
   
          for (x in myObj) {
              myBarChart.config.data.labels[i] =  myObj[x].MACHDESC;
-             myBarChart.config.data.datasets[0].data[i] =  myObj[x].PRODUCTION;
+             myBarChart.config.data.datasets[0].data[i] =  parseFloat(  myObj[x].PRODUCTION ).toFixed(2);
              myBarChart.config.data.datasets[0].backgroundColor[i] = Color[i];
              myBarChart.config.data.datasets[0].borderColor[i]= Color[i];
               i++;
            }
           
           myBarChart.update(); // Update the Content.
+  
   }
   
   
@@ -86,19 +89,19 @@ $(document).ready(function(){
    Add new row to the information Table on the Dashboard,
    from the historic table.
    ***********************************************/
-   function createLink( Text, machineId){
+   function createLink( Text, machineId, myURL){
   
-      const Element = document.createElement("button");
+      let Element = document.createElement("button");
       Element.innerHTML = Text.trim(); 
       Element.setAttribute("type", "button"); 
      // Element.id = "exampleModal";
-      Element.className = "btn  pt-1 pb-1";
+      Element.className = "btn  pt-0 pb-0 pr-1 pl-1";
       Element.setAttribute("data-mdb-toggle", "modal"); 
       Element.setAttribute("data-mdb-target", "#modalMachineOrders"); 
       Element.addEventListener("focus", () => { 
-               const dDate = new Date();
+               let dDate = new Date();
                document.getElementById('modalMachineOrdersLabel').innerHTML = "Machine: <strong>" + Text.trim() + "</strong> Date: <strong>"+ dDate.format("m-d-Y")+ "</strong>";   
-               getAJAX("../php/dailyOrders.php?idmachine="+ machineId)
+               getAJAX(myURL+ machineId)
                      .then( addOrders )
                      .catch( err => alert( err ) );  
               });
@@ -131,13 +134,15 @@ $(document).ready(function(){
      let Operator = "";
      let Order = "";
      let Qty = "";
+     let SqFt = "";
      let Time = "";
      let timeWorked ="";
   
-    myObj.forEach( (row) =>{
+     myObj.forEach( (row) =>{
           Operator += row.LHOPER + "<br>";
           Order += row.LHORD.trim()+"/"+ row.LHLIN.trim()+ "<br>";
           Qty +=   row.LHQTY + "<br>";
+          SqFt +=    parseFloat( row.PRODUCTION ).toFixed(2) + "<br>";
           timeWorked = differenceDateTime( row.LHSTRDTTIM, row.LHSTPDTTIM)
           Time +=  timeWorked.Hours +":" + timeWorked.Minutes+ "<br>";
   
@@ -145,6 +150,7 @@ $(document).ready(function(){
     document.getElementById("operator").innerHTML =  Operator;
     document.getElementById("order").innerHTML =  Order;
     document.getElementById("qty").innerHTML =  Qty;
+    document.getElementById("sqft").innerHTML =  SqFt;
     document.getElementById("time").innerHTML =  Time;
   
   }
@@ -166,7 +172,7 @@ $(document).ready(function(){
          let machineDescription;
         for( x in myObj ) {
           
-            machineDescription =  createLink( myObj[x].MACHDESC, myObj[x].MACHINEID.trim() );
+            machineDescription =  createLink( myObj[x].MACHDESC, myObj[x].MACHINEID.trim(), "../php/dailyOrders.php?idmachine=" );
             $("#"+myObj[x].MACHINEID.trim() ).append( machineDescription);
   
         }
@@ -180,27 +186,59 @@ $(document).ready(function(){
   function  updatemyProduction() {
   
         setInterval(function() {
-  
+     
                 getAJAX( "../php/ControllerInquiry.php?q=Dailyprod")
                        .then(updateGraphInfo);
   
-                getAJAX( "../php/ControllerInquiry.php?q=Machprod")
-                       .then(addRow);  
+                 getAJAX( "../php/ControllerInquiry.php?q=Machprod")
+                       .then(addRow);       
+    
                    
           }, 120000); // update SQ Feet Production every 2 Minutes
   
   }
   
+  function addMachineSqft (myObj) {
+  
+      let machineLink;
+      let Production;
+      document.getElementById("machinesqft").innerHTML = "";
+      document.getElementById("sqftsqft").innerHTML = "";
+      for( x in myObj ) {
+            
+          document.getElementById("machinesqft").innerHTML += '<div class= "pt-0 pb-0 ml-2 pl-2" id="sqft'+ myObj[x].MACHINEID.trim() + '"></div>';
+          Production =  parseFloat( myObj[x].PRODUCTION ).toFixed(2);
+          document.getElementById("sqftsqft").innerHTML += '<div class= "pt-0 pb-0 btn">' + Production + "</div><div class = 'row'></div>";
+      }
+  
+      for( x in myObj ) {
+            
+            machineLink =  createLink( myObj[x].MACHDESC, myObj[x].MACHINEID.trim(), "../php/dailyOrders.php?idmachine=" );
+            $("#sqft"+myObj[x].MACHINEID.trim() ).append( machineLink);
+           
+      }
+  
+  }
+  /*
+  function showSQFT () {
+  
+    getAJAX( "../php/ControllerInquiry.php?q=Dailyprod" )
+                   .then(addMachineSqft); 
+  
+  } */
   
   
    getAJAX( "../php/ControllerInquiry.php?q=Dailyprod")
                    .then(updateGraphInfo)
-                    .catch( err => console.dir( err ) );
+                   .catch( err => console.dir( err ) );
   
    getAJAX( "../php/ControllerInquiry.php?q=Machprod")
                    .then(addRow); 
   
    updatemyProduction();
+  
+  
+  
   
   });
    
